@@ -1,0 +1,641 @@
+openapi: 3.0.3
+info:
+  title: Cinema Booking API
+  description: >
+    REST API for a cinema: movies, projections (screenings) and reservations.
+    Access is role-based (CLIENT, EMPLOYEE, MANAGER) via JWT bearer authentication.
+  version: 1.0.0
+
+servers:
+  - url: https://api.cinema.com/v1
+    description: Production server
+
+tags:
+  - name: Auth
+    description: Registration and authentication
+  - name: Movies
+    description: Movie catalog
+  - name: Projections
+    description: Movie screenings
+  - name: Reservations
+    description: Seat reservations
+
+
+# ─────────────────────────────────────────────
+# PATHS
+# ─────────────────────────────────────────────
+paths:
+
+  # ── Auth ──────────────────────────────────────
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new CLIENT account
+      description: >
+        Creates a new account. Accounts created through this endpoint are
+        always assigned the CLIENT role.
+      operationId: register
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistration'
+      responses:
+        '201':
+          description: Account successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Authenticate and obtain a JWT
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credentials'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthToken'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ── Movies ────────────────────────────────────
+  /movies/{id}:
+    parameters:
+      - $ref: '#/components/parameters/id'
+
+    put:
+      tags: [Movies]
+      summary: Update a movie
+      description: MANAGERS only. CLIENTS and EMPLOYEES receive a 403.
+      operationId: updateMovie
+      x-roles: [MANAGER]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MovieUpdate'
+      responses:
+        '200':
+          description: Movie successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Movie'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ── Projections ───────────────────────────────
+  /projections:
+    get:
+      tags: [Projections]
+      summary: List all projections
+      description: Open to everyone.
+      operationId: listProjections
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        '200':
+          description: Paginated list of projections
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectionPage'
+
+  /projections/{id}:
+    parameters:
+      - $ref: '#/components/parameters/id'
+
+    put:
+      tags: [Projections]
+      summary: Update a projection
+      description: MANAGERS only. CLIENTS and EMPLOYEES receive a 403.
+      operationId: updateProjection
+      x-roles: [MANAGER]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectionUpdate'
+      responses:
+        '200':
+          description: Projection successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Projection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ── Reservations ──────────────────────────────
+  /reservations:
+    get:
+      tags: [Reservations]
+      summary: List all reservations
+      description: CLIENTS receive a 403. EMPLOYEES and MANAGERS see every reservation.
+      operationId: listReservations
+      x-roles: [EMPLOYEE, MANAGER]
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        '200':
+          description: Paginated list of reservations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationPage'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /reservations/{id}:
+    parameters:
+      - $ref: '#/components/parameters/id'
+
+    get:
+      tags: [Reservations]
+      summary: Get a reservation by ID
+      description: >
+        A CLIENT gets a 200 only if they own the reservation, and a 403 if
+        it belongs to another CLIENT. EMPLOYEES and MANAGERS get a 200 for
+        any reservation.
+      operationId: getReservationById
+      x-roles: [CLIENT, EMPLOYEE, MANAGER]
+      responses:
+        '200':
+          description: Reservation found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Reservations]
+      summary: Update a reservation
+      description: >
+        CLIENTS get a 200 when updating their own reservation, but only
+        EMPLOYEES may validate a reservation (set status to SUCCESS) — a
+        CLIENT attempting to validate receives a 403. EMPLOYEES and
+        MANAGERS get a 200.
+      operationId: updateReservation
+      x-roles: [CLIENT, EMPLOYEE, MANAGER]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationUpdate'
+      responses:
+        '200':
+          description: Reservation successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+# ─────────────────────────────────────────────
+# COMPONENTS
+# ─────────────────────────────────────────────
+components:
+
+  # ── Security ───────────────────────────────
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  # ── Reusable parameters ───────────────────────
+  parameters:
+    id:
+      name: id
+      in: path
+      required: true
+      description: Unique resource identifier (UUID)
+      schema:
+        type: string
+        format: uuid
+        example: "550e8400-e29b-41d4-a716-446655440000"
+
+    page:
+      name: page
+      in: query
+      description: Page number (1-based)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    pageSize:
+      name: pageSize
+      in: query
+      description: Number of items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  # ── Reusable responses ────────────────────────
+  responses:
+    NotFound:
+      description: The requested resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 404
+            message: "Resource not found"
+
+    BadRequest:
+      description: The request body or parameters are invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 400
+            message: "Validation error: 'title' is required"
+
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 401
+            message: "Invalid email or password"
+
+    Forbidden:
+      description: The authenticated user is not allowed to perform this action
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 403
+            message: "You are not allowed to perform this action"
+
+  # ── Schemas ───────────────────────────────────
+  schemas:
+
+    # ── Shared ────────────────────────────────
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: integer
+          description: HTTP status code
+        message:
+          type: string
+          description: Human-readable error description
+
+    PaginationMeta:
+      type: object
+      required: [page, pageSize, totalItems, totalPages]
+      properties:
+        page:
+          type: integer
+          example: 1
+        pageSize:
+          type: integer
+          example: 20
+        totalItems:
+          type: integer
+          example: 87
+        totalPages:
+          type: integer
+          example: 5
+
+    Genre:
+      type: string
+      enum:
+        - THRILLER
+        - ROMANCE
+        - COMEDY
+        - DRAMA
+        - ACTION
+        - SCI_FI
+        - FANTASY
+        - ANIMATION
+
+    UserRole:
+      type: string
+      enum:
+        - CLIENT
+        - EMPLOYEE
+        - MANAGER
+
+    ReservationStatus:
+      type: string
+      enum:
+        - PENDING
+        - SUCCESS
+        - CANCELED
+
+    # ── Room / Seat ───────────────────────────
+    Room:
+      type: object
+      required: [id, number, capacity]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+        number:
+          type: string
+          example: "Room 3"
+        capacity:
+          type: integer
+          minimum: 1
+          example: 120
+
+    Seat:
+      type: object
+      required: [id, number]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        number:
+          type: string
+          example: "F12"
+
+    # ── Auth ──────────────────────────────────
+    Credentials:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: "ania@example.com"
+        password:
+          type: string
+          format: password
+          example: "S3cur3P@ss!"
+
+    AuthToken:
+      type: object
+      required: [accessToken, tokenType, user]
+      properties:
+        accessToken:
+          type: string
+          description: JWT to use as a Bearer token
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        tokenType:
+          type: string
+          example: "Bearer"
+        user:
+          $ref: '#/components/schemas/User'
+
+    UserRegistration:
+      type: object
+      required: [firstName, lastName, birthdate, email, password, phone]
+      properties:
+        firstName:
+          type: string
+          example: "Ania"
+        lastName:
+          type: string
+          example: "Razafy"
+        birthdate:
+          type: string
+          format: date
+          example: "2000-05-14"
+        email:
+          type: string
+          format: email
+          example: "ania@example.com"
+        password:
+          type: string
+          format: password
+          example: "S3cur3P@ss!"
+        phone:
+          type: string
+          example: "+261340000000"
+
+    # ── User ──────────────────────────────────
+    User:
+      type: object
+      required: [id, firstName, lastName, birthdate, email, phone, role]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d"
+        firstName:
+          type: string
+          example: "Ania"
+        lastName:
+          type: string
+          example: "Razafy"
+        birthdate:
+          type: string
+          format: date
+          example: "2000-05-14"
+        email:
+          type: string
+          format: email
+          example: "ania@example.com"
+        phone:
+          type: string
+          example: "+261340000000"
+        role:
+          $ref: '#/components/schemas/UserRole'
+
+    # ── Movie ─────────────────────────────────
+    Movie:
+      type: object
+      required: [id, title, genres, description, duration]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+        title:
+          type: string
+          example: "Inception"
+        genres:
+          type: array
+          items:
+            $ref: '#/components/schemas/Genre'
+          example: ["SCI_FI", "THRILLER"]
+        description:
+          type: string
+          example: "A thief who steals corporate secrets through dream-sharing technology."
+        duration:
+          type: string
+          format: duration
+          description: ISO 8601 duration
+          example: "PT2H28M"
+
+    MovieUpdate:
+      type: object
+      required: [title, genres, description, duration]
+      properties:
+        title:
+          type: string
+          example: "Inception"
+        genres:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Genre'
+          example: ["SCI_FI", "THRILLER"]
+        description:
+          type: string
+          example: "A thief who steals corporate secrets through dream-sharing technology."
+        duration:
+          type: string
+          format: duration
+          example: "PT2H28M"
+
+    # ── Projection ────────────────────────────
+    Projection:
+      type: object
+      required: [id, movie, room, datetime, seatPrice]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "d1a2b3c4-e5f6-4a5b-8c9d-0e1f2a3b4c5d"
+        movie:
+          $ref: '#/components/schemas/Movie'
+        room:
+          $ref: '#/components/schemas/Room'
+        datetime:
+          type: string
+          format: date-time
+          example: "2026-08-15T19:30:00Z"
+        seatPrice:
+          type: number
+          format: double
+          minimum: 0
+          example: 12.50
+
+    ProjectionUpdate:
+      type: object
+      required: [movieId, roomId, datetime, seatPrice]
+      properties:
+        movieId:
+          type: string
+          format: uuid
+          example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+        roomId:
+          type: string
+          format: uuid
+          example: "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+        datetime:
+          type: string
+          format: date-time
+          example: "2026-08-15T19:30:00Z"
+        seatPrice:
+          type: number
+          format: double
+          minimum: 0
+          example: 12.50
+
+    ProjectionPage:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Projection'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # ── Reservation ───────────────────────────
+    Reservation:
+      type: object
+      required: [id, user, projection, seats, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "e1f2a3b4-c5d6-4a5b-8c9d-0e1f2a3b4c5d"
+        user:
+          $ref: '#/components/schemas/User'
+        projection:
+          $ref: '#/components/schemas/Projection'
+        seats:
+          type: array
+          items:
+            $ref: '#/components/schemas/Seat'
+        status:
+          $ref: '#/components/schemas/ReservationStatus'
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-08-01T10:15:30Z"
+
+    ReservationUpdate:
+      type: object
+      required: [seatIds, status]
+      properties:
+        seatIds:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            format: uuid
+          example: ["550e8400-e29b-41d4-a716-446655440000"]
+        status:
+          $ref: '#/components/schemas/ReservationStatus'
+
+    ReservationPage:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reservation'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+security:
+  - bearerAuth: []
