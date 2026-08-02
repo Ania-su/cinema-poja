@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import school.hei.demo.entity.Reservation;
+import school.hei.demo.entity.enums.ReservationStatus;
 import school.hei.demo.service.ReservationService;
 
 @AllArgsConstructor
@@ -28,7 +29,7 @@ public class ReservationController {
   }
 
   @PutMapping("/{id}")
-  public Reservation updateReservation(@PathVariable UUID id) {
+  public Reservation updateReservation(@PathVariable UUID id, ReservationStatus status) {
     return reservationService.updateReservation(id);
   }
 }
