@@ -1,5 +1,6 @@
 package school.hei.demo.endpoint.rest.controller;
 
+import java.util.List;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,7 +18,7 @@ public class ReservationController {
   private final ReservationService reservationService;
 
   @GetMapping
-  public Reservation getReservation() {
+  public List<Reservation> getReservation() {
     return reservationService.getReservation();
   }
 
