@@ -21,7 +21,7 @@ public class MovieService {
   public List<Movie> getMovies() {
     return movieMapper.toDomain(movieRepository.findAll());
   }
-  
+
   public Movie findById(UUID movieId) {
     JMovie jMovie =
         movieRepository
