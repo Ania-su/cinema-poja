@@ -1,0 +1,39 @@
+package school.hei.demo.endpoint.rest.controller;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import school.hei.demo.endpoint.rest.controller.dto.MovieRequest;
+import school.hei.demo.entity.Movie;
+import school.hei.demo.service.MovieService;
+
+import java.util.List;
+import java.util.UUID;
+
+@RequiredArgsConstructor
+@RestController
+public class MovieController {
+
+    private final MovieService service;
+
+    @GetMapping("/movies")
+    public ResponseEntity<List<Movie>> getMovies() {
+        return ResponseEntity.ok(service.getMovies());
+    }
+
+    @PutMapping("/movies")
+    public ResponseEntity<Movie> createMovie(@RequestBody MovieRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.createMovie(request));
+    }
+
+    @GetMapping("/movies/{id}")
+    public ResponseEntity<Movie> getMovieById(@PathVariable UUID id) {
+        return ResponseEntity.ok(service.getMovieById(id));
+    }
+
+    @PutMapping("/movies")
+    public ResponseEntity<Movie> updateMovie(@RequestBody MovieRequest request) {
+        return ResponseEntity.ok(service.updateMovie(request.getId(), request));
+    }
+}
