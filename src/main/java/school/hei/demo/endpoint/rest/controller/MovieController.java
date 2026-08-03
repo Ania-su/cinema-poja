@@ -21,7 +21,7 @@ public class MovieController {
     return ResponseEntity.ok(service.getMovies());
   }
 
-  @PutMapping("/movies")
+  @PostMapping("/movies")
   public ResponseEntity<Movie> createMovie(@RequestBody MovieRequest request) {
     return ResponseEntity.status(HttpStatus.CREATED).body(service.createMovie(request));
   }
