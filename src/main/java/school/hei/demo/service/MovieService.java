@@ -21,6 +21,14 @@ public class MovieService {
   public List<Movie> getMovies() {
     return movieMapper.toDomain(movieRepository.findAll());
   }
+  
+  public Movie findById(UUID movieId) {
+    JMovie jMovie =
+        movieRepository
+            .findById(movieId)
+            .orElseThrow(() -> new NotFoundException("Movie not found with id: " + movieId));
+    return movieMapper.toDomain(jMovie);
+  }
 
   public Movie getMovieById(UUID id) {
     JMovie jMovie =
