@@ -16,6 +16,7 @@ public class Reservation {
   private Instant createdAt;
   private ReservationStatus status;
   private UUID projectionId;
-  private UUID userId;
+  private UUID clientId;
+  private UUID employeeId;
   private List<UUID> seatIds;
 }
