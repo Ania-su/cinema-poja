@@ -48,7 +48,7 @@ public class ReservationService {
             .orElseThrow(() -> new NotFoundException("Reservation not found with id: " + id));
     jReservation.setStatus(status);
     JReservation saved = reservationRepository.save(jReservation);
-    return reservationMapper.toDomain(jReservation);
+    return reservationMapper.toDomain(saved);
   }
 
   public Reservation createReservation(ReservationRequest newReservation) {
