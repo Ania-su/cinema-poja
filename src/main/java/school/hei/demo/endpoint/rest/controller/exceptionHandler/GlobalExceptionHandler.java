@@ -5,9 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-import school.hei.demo.exception.BadRequestException;
-import school.hei.demo.exception.ForbiddenException;
-import school.hei.demo.exception.NotFoundException;
+import school.hei.demo.exception.*;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -32,6 +30,16 @@ public class GlobalExceptionHandler {
       MethodArgumentTypeMismatchException e) {
     return build(
         HttpStatus.BAD_REQUEST, "Invalid id '" + e.getValue() + "': must be a valid UUID.");
+  }
+
+  @ExceptionHandler(EmailAlreadyTakenException.class)
+  public ResponseEntity<ApiError> handleEmailAlreadyTakenException(EmailAlreadyTakenException e) {
+    return build(HttpStatus.BAD_REQUEST, e.getMessage());
+  }
+
+  @ExceptionHandler(InvalidCredentialsException.class)
+  public ResponseEntity<ApiError> handleInvalidCredentialsException(InvalidCredentialsException e) {
+    return build(HttpStatus.UNAUTHORIZED, e.getMessage());
   }
 
   @ExceptionHandler(Exception.class)
