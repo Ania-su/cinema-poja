@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
 import school.hei.demo.endpoint.rest.controller.dto.RegisterRequest;
 import school.hei.demo.exception.EmailAlreadyTakenException;
+import school.hei.demo.exception.InvalidCredentialsException;
 import school.hei.demo.repository.UserRepository;
 
 @Component
@@ -39,7 +40,7 @@ public class RegisterValidator {
     }
 
     if (!errors.isEmpty()) {
-      throw new school.hei.demo.exception.InvalidCredentialsException(errors.toString().trim());
+      throw new InvalidCredentialsException(errors.toString().trim());
     } else if (userRepository.findByEmail(request.getEmail()).isPresent()) {
       throw new EmailAlreadyTakenException("Email already taken");
     }
