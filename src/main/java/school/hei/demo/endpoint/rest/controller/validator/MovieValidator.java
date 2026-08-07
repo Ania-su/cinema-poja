@@ -1,14 +1,13 @@
 package school.hei.demo.endpoint.rest.controller.validator;
 
-import lombok.AllArgsConstructor;
+import org.springframework.stereotype.Component;
 import school.hei.demo.endpoint.rest.controller.dto.MovieRequest;
 import school.hei.demo.exception.BadRequestException;
 
-@AllArgsConstructor
+@Component
 public class MovieValidator {
-  private final MovieRequest movieRequest;
 
-  public void validate() {
+  public void validate(MovieRequest movieRequest) {
     StringBuilder errors = new StringBuilder();
 
     if (movieRequest.getTitle() == null || movieRequest.getTitle().isEmpty()) {

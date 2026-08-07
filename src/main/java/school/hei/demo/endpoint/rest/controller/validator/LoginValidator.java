@@ -1,19 +1,18 @@
 package school.hei.demo.endpoint.rest.controller.validator;
 
-import lombok.AllArgsConstructor;
+import org.springframework.stereotype.Component;
 import school.hei.demo.endpoint.rest.controller.dto.LoginRequest;
 import school.hei.demo.exception.InvalidCredentialsException;
 
-@AllArgsConstructor
+@Component
 public class LoginValidator {
-  private final LoginRequest loginRequest;
 
-  public void validate() {
+  public void validate(LoginRequest loginRequest) {
     StringBuilder errors = new StringBuilder();
 
     if (loginRequest.getEmail() == null || loginRequest.getEmail().isEmpty()) {
       errors.append("Email cannot be empty. ");
-    } else if (!loginRequest.getEmail().matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+    } else if (!loginRequest.getEmail().matches(ValidationPatterns.EMAIL_REGEX)) {
       errors.append("Email must be valid. ");
     }
     if (loginRequest.getPassword() == null || loginRequest.getPassword().isEmpty()) {

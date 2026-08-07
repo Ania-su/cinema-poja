@@ -39,7 +39,7 @@ public class MovieService {
   }
 
   public Movie createMovie(MovieRequest request) {
-    movieValidator.validate();
+    movieValidator.validate(request);
     Movie toSave = new Movie();
     toSave.setTitle(request.getTitle());
     toSave.setGenres(request.getGenres());
@@ -49,7 +49,7 @@ public class MovieService {
   }
 
   public Movie updateMovie(UUID id, MovieRequest request) {
-    movieValidator.validate();
+    movieValidator.validate(request);
     JMovie existing =
         movieRepository.findById(id).orElseThrow(() -> new NotFoundException("Movie not found"));
     existing.setTitle(request.getTitle());

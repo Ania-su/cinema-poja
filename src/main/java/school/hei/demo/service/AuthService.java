@@ -3,11 +3,12 @@ package school.hei.demo.service;
 import lombok.AllArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import school.hei.demo.endpoint.rest.controller.dto.LoginRequest;
 import school.hei.demo.endpoint.rest.controller.dto.RegisterRequest;
 import school.hei.demo.endpoint.rest.controller.validator.LoginValidator;
+import school.hei.demo.endpoint.rest.controller.validator.RegisterValidator;
 import school.hei.demo.entity.User;
 import school.hei.demo.entity.enums.UserRole;
-import school.hei.demo.exception.EmailAlreadyTakenException;
 import school.hei.demo.exception.InvalidCredentialsException;
 import school.hei.demo.repository.UserRepository;
 import school.hei.demo.repository.mapper.UserMapper;
@@ -22,17 +23,10 @@ public class AuthService {
   private final JwtService jwtService;
   private final UserMapper userMapper;
   private final LoginValidator loginValidator;
+  private final RegisterValidator registerValidator;
 
   public String register(RegisterRequest request) {
-    if (request.getEmail() == null
-        || request.getEmail().isBlank()
-        || request.getPassword() == null
-        || request.getPassword().isBlank()) {
-      throw new InvalidCredentialsException("Email and password are required");
-    }
-    if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-      throw new EmailAlreadyTakenException("Email already taken");
-    }
+    registerValidator.validate(request);
 
     User toSave = new User();
     toSave.setFirstName(request.getFirstName());
@@ -47,17 +41,17 @@ public class AuthService {
     return jwtService.generateToken(userMapper.toDomain(saved));
   }
 
-  public String login(String email, String password) {
-    loginValidator.validate();
+  public String login(LoginRequest request) {
+    loginValidator.validate(request);
 
     JUser jUser =
         userRepository
-            .findByEmail(email)
+            .findByEmail(request.getEmail())
             .orElseThrow(() -> new InvalidCredentialsException("Invalid credentials"));
 
     User user = userMapper.toDomain(jUser);
 
-    if (!passwordEncoder.matches(password, user.getPassword())) {
+    if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
       throw new InvalidCredentialsException("Invalid credentials");
     }
 
