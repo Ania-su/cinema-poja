@@ -2,7 +2,7 @@ package school.hei.demo.endpoint.rest.controller.validator;
 
 import lombok.AllArgsConstructor;
 import school.hei.demo.endpoint.rest.controller.dto.LoginRequest;
-import school.hei.demo.exception.BadRequestException;
+import school.hei.demo.exception.InvalidCredentialsException;
 
 @AllArgsConstructor
 public class LoginValidator {
@@ -21,7 +21,7 @@ public class LoginValidator {
     }
 
     if (!errors.isEmpty()) {
-      throw new BadRequestException(errors.toString().trim());
+      throw new InvalidCredentialsException(errors.toString().trim());
     }
   }
 }
