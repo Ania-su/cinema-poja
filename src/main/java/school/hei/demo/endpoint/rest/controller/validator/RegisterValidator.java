@@ -2,7 +2,6 @@ package school.hei.demo.endpoint.rest.controller.validator;
 
 import java.time.LocalDate;
 import lombok.AllArgsConstructor;
-
 import org.springframework.stereotype.Component;
 import school.hei.demo.endpoint.rest.controller.dto.RegisterRequest;
 import school.hei.demo.exception.EmailAlreadyTakenException;
