@@ -6,17 +6,15 @@ import school.hei.demo.exception.BadRequestException;
 
 @Component
 public class MovieValidator {
-
   public void validate(MovieRequest movieRequest) {
     StringBuilder errors = new StringBuilder();
-
-    if (movieRequest.getTitle() == null || movieRequest.getTitle().isEmpty()) {
+    if (movieRequest.getTitle() == null || movieRequest.getTitle().isBlank()) {
       errors.append("Movie title cannot be empty. ");
     }
     if (movieRequest.getGenres() == null || movieRequest.getGenres().isEmpty()) {
       errors.append("Movie genres cannot be empty. ");
     }
-    if (movieRequest.getDescription() == null || movieRequest.getDescription().isEmpty()) {
+    if (movieRequest.getDescription() == null || movieRequest.getDescription().isBlank()) {
       errors.append("Movie description cannot be empty. ");
     }
     if (movieRequest.getDuration() == null
