@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import school.hei.demo.endpoint.rest.controller.dto.RegisterRequest;
+import school.hei.demo.endpoint.rest.controller.validator.LoginValidator;
 import school.hei.demo.entity.User;
 import school.hei.demo.entity.enums.UserRole;
 import school.hei.demo.exception.EmailAlreadyTakenException;
@@ -20,6 +21,7 @@ public class AuthService {
   private final PasswordEncoder passwordEncoder;
   private final JwtService jwtService;
   private final UserMapper userMapper;
+  private final LoginValidator loginValidator;
 
   public String register(RegisterRequest request) {
     if (request.getEmail() == null
@@ -46,9 +48,7 @@ public class AuthService {
   }
 
   public String login(String email, String password) {
-    if (email == null || email.isBlank() || password == null || password.isBlank()) {
-      throw new InvalidCredentialsException("Invalid credentials");
-    }
+    loginValidator.validate();
 
     JUser jUser =
         userRepository
