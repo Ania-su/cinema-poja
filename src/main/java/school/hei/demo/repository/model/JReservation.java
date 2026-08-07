@@ -7,6 +7,8 @@ import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import school.hei.demo.entity.enums.ReservationStatus;
 
 @Entity
@@ -23,7 +25,8 @@ public class JReservation {
   private Instant createdAt;
 
   @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
+  @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+  @Column(name = "status", nullable = false, columnDefinition = "reservation_status")
   private ReservationStatus status;
 
   @ManyToOne
@@ -31,8 +34,12 @@ public class JReservation {
   private JProjection projection;
 
   @ManyToOne
-  @JoinColumn(name = "user_id", nullable = false)
-  private JUser user;
+  @JoinColumn(name = "client_id", nullable = false)
+  private JUser client;
+
+  @ManyToOne
+  @JoinColumn(name = "employee_id")
+  private JUser employee;
 
   @ManyToMany
   @JoinTable(
