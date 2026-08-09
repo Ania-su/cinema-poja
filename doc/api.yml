@@ -3,11 +3,13 @@ info:
   title: Cinema Booking API
   description: >
     REST API for a cinema: movies, projections (screenings) and reservations.
-    Access is role-based (CLIENT, EMPLOYEE, MANAGER) via JWT bearer authentication.
+    Access is role-based (CLIENT, EMPLOYEE, MANAGER). Authentication is done
+    via a JWT, provided either as a Bearer token in the `Authorization` header
+    or as an httpOnly `jwt` cookie set by the login/register endpoints.
   version: 1.0.0
 
 servers:
-  - url: https://api.cinema.com/v1
+  - url: https://api.cinema.com
     description: Production server
 
 tags:
@@ -27,13 +29,15 @@ tags:
 paths:
 
   # ── Auth ──────────────────────────────────────
-  /auth/register:
+  /register:
     post:
       tags: [Auth]
-      summary: Register a new CLIENT account
+      summary: Register a new account
       description: >
-        Creates a new account. Accounts created through this endpoint are
-        always assigned the CLIENT role.
+        Creates a new account. The role is provided by the caller in the
+        request body (CLIENT, EMPLOYEE or MANAGER) and is required.
+        On success, the JWT is set as an httpOnly `jwt` cookie
+        (Secure, SameSite=Strict, 1h expiry) in the response headers.
       operationId: register
       security: []
       requestBody:
@@ -44,18 +48,40 @@ paths:
               $ref: '#/components/schemas/UserRegistration'
       responses:
         '201':
-          description: Account successfully created
+          description: Account successfully created. JWT returned via Set-Cookie.
+          headers:
+            Set-Cookie:
+              description: httpOnly JWT cookie named `jwt`
+              schema:
+                type: string
+                example: "jwt=eyJhbGciOi...; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=3600"
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Register successfully"
+        '400':
+          description: >
+            Validation error (missing/invalid field, birthdate in the future,
+            password shorter than 8 characters, invalid email) or email
+            already taken.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
-        '400':
-          $ref: '#/components/responses/BadRequest'
+                $ref: '#/components/schemas/Error'
+              example:
+                timestamp: "2026-08-10T09:00:00Z"
+                status: 400
+                error: "Bad Request"
+                message: "Email already taken"
 
-  /auth/login:
+  /login:
     post:
       tags: [Auth]
       summary: Authenticate and obtain a JWT
+      description: >
+        On success, the JWT is set as an httpOnly `jwt` cookie
+        (Secure, SameSite=Strict, 1h expiry) in the response headers.
       operationId: login
       security: []
       requestBody:
@@ -66,18 +92,84 @@ paths:
               $ref: '#/components/schemas/Credentials'
       responses:
         '200':
-          description: Authentication successful
-          content:
-            application/json:
+          description: Authentication successful. JWT returned via Set-Cookie.
+          headers:
+            Set-Cookie:
+              description: httpOnly JWT cookie named `jwt`
               schema:
-                $ref: '#/components/schemas/AuthToken'
+                type: string
+                example: "jwt=eyJhbGciOi...; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=3600"
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Login successfully"
         '401':
           $ref: '#/components/responses/Unauthorized'
 
   # ── Movies ────────────────────────────────────
+  /movies:
+    get:
+      tags: [Movies]
+      summary: List all movies
+      description: Open to everyone.
+      operationId: listMovies
+      security: []
+      responses:
+        '200':
+          description: List of movies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Movie'
+
+    post:
+      tags: [Movies]
+      summary: Create a movie
+      description: >
+        Requires an authenticated user. **Note:** unlike the update endpoint,
+        this route is not restricted to MANAGER at the security-filter level
+        in the current configuration — any authenticated CLIENT, EMPLOYEE or
+        MANAGER can call it. This looks like a gap and is only documented as
+        implemented; it is not something this spec change fixes.
+      operationId: createMovie
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MovieRequest'
+      responses:
+        '201':
+          description: Movie successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Movie'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
   /movies/{id}:
     parameters:
       - $ref: '#/components/parameters/id'
+
+    get:
+      tags: [Movies]
+      summary: Get a movie by ID
+      description: Open to everyone.
+      operationId: getMovieById
+      security: []
+      responses:
+        '200':
+          description: Movie found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Movie'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
     put:
       tags: [Movies]
@@ -90,7 +182,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MovieUpdate'
+              $ref: '#/components/schemas/MovieRequest'
       responses:
         '200':
           description: Movie successfully updated
@@ -110,19 +202,18 @@ paths:
     get:
       tags: [Projections]
       summary: List all projections
-      description: Open to everyone.
+      description: Open to everyone. Not paginated — returns the full list.
       operationId: listProjections
       security: []
-      parameters:
-        - $ref: '#/components/parameters/page'
-        - $ref: '#/components/parameters/pageSize'
       responses:
         '200':
-          description: Paginated list of projections
+          description: List of projections
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectionPage'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Projection'
 
   /projections/{id}:
     parameters:
@@ -139,7 +230,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProjectionUpdate'
+              $ref: '#/components/schemas/ProjectionRequest'
       responses:
         '200':
           description: Projection successfully updated
@@ -159,21 +250,44 @@ paths:
     get:
       tags: [Reservations]
       summary: List all reservations
-      description: CLIENTS receive a 403. EMPLOYEES and MANAGERS see every reservation.
+      description: >
+        CLIENTS receive a 403. EMPLOYEES and MANAGERS see every reservation.
+        Not paginated — returns the full list.
       operationId: listReservations
       x-roles: [EMPLOYEE, MANAGER]
-      parameters:
-        - $ref: '#/components/parameters/page'
-        - $ref: '#/components/parameters/pageSize'
       responses:
         '200':
-          description: Paginated list of reservations
+          description: List of reservations
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ReservationPage'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reservation'
         '403':
           $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [Reservations]
+      summary: Create a reservation
+      description: Available to CLIENT, EMPLOYEE and MANAGER.
+      operationId: createReservation
+      x-roles: [CLIENT, EMPLOYEE, MANAGER]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationRequest'
+      responses:
+        '201':
+          description: Reservation successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
   /reservations/{id}:
     parameters:
@@ -183,9 +297,10 @@ paths:
       tags: [Reservations]
       summary: Get a reservation by ID
       description: >
-        A CLIENT gets a 200 only if they own the reservation, and a 403 if
-        it belongs to another CLIENT. EMPLOYEES and MANAGERS get a 200 for
-        any reservation.
+        Any authenticated user may call this route (not gated by role at the
+        security-filter level); ownership enforcement (a CLIENT only seeing
+        their own reservation, 403 otherwise) is handled in the service layer.
+        EMPLOYEES and MANAGERS get a 200 for any reservation.
       operationId: getReservationById
       x-roles: [CLIENT, EMPLOYEE, MANAGER]
       responses:
@@ -202,20 +317,21 @@ paths:
 
     put:
       tags: [Reservations]
-      summary: Update a reservation
+      summary: Update a reservation's status
       description: >
-        CLIENTS get a 200 when updating their own reservation, but only
-        EMPLOYEES may validate a reservation (set status to SUCCESS) — a
-        CLIENT attempting to validate receives a 403. EMPLOYEES and
-        MANAGERS get a 200.
+        EMPLOYEES and MANAGERS only. CLIENTS always receive a 403, even for
+        their own reservation. The request body is only the new status
+        (e.g. to validate a reservation by setting it to SUCCESS) — seats
+        cannot be changed through this endpoint.
       operationId: updateReservation
-      x-roles: [CLIENT, EMPLOYEE, MANAGER]
+      x-roles: [EMPLOYEE, MANAGER]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReservationUpdate'
+              $ref: '#/components/schemas/ReservationStatus'
+            example: "SUCCESS"
       responses:
         '200':
           description: Reservation successfully updated
@@ -241,6 +357,14 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+      description: "JWT passed in the `Authorization: Bearer <token>` header."
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: jwt
+      description: >
+        JWT passed as an httpOnly cookie named `jwt`, set automatically by
+        /login and /register.
 
   # ── Reusable parameters ───────────────────────
   parameters:
@@ -254,25 +378,6 @@ components:
         format: uuid
         example: "550e8400-e29b-41d4-a716-446655440000"
 
-    page:
-      name: page
-      in: query
-      description: Page number (1-based)
-      schema:
-        type: integer
-        minimum: 1
-        default: 1
-
-    pageSize:
-      name: pageSize
-      in: query
-      description: Number of items per page
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 100
-        default: 20
-
   # ── Reusable responses ────────────────────────
   responses:
     NotFound:
@@ -282,7 +387,9 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
           example:
-            code: 404
+            timestamp: "2026-08-10T09:00:00Z"
+            status: 404
+            error: "Not Found"
             message: "Resource not found"
 
     BadRequest:
@@ -292,8 +399,10 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
           example:
-            code: 400
-            message: "Validation error: 'title' is required"
+            timestamp: "2026-08-10T09:00:00Z"
+            status: 400
+            error: "Bad Request"
+            message: "Movie title cannot be empty."
 
     Unauthorized:
       description: Missing or invalid credentials
@@ -302,8 +411,10 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
           example:
-            code: 401
-            message: "Invalid email or password"
+            timestamp: "2026-08-10T09:00:00Z"
+            status: 401
+            error: "Unauthorized"
+            message: "Email cannot be empty."
 
     Forbidden:
       description: The authenticated user is not allowed to perform this action
@@ -312,7 +423,9 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
           example:
-            code: 403
+            timestamp: "2026-08-10T09:00:00Z"
+            status: 403
+            error: "Forbidden"
             message: "You are not allowed to perform this action"
 
   # ── Schemas ───────────────────────────────────
@@ -321,31 +434,25 @@ components:
     # ── Shared ────────────────────────────────
     Error:
       type: object
-      required: [code, message]
+      description: Matches the ApiError record returned by GlobalExceptionHandler.
+      required: [timestamp, status, error, message]
       properties:
-        code:
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-08-10T09:00:00Z"
+        status:
           type: integer
           description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: HTTP status reason phrase
+          example: "Bad Request"
         message:
           type: string
           description: Human-readable error description
-
-    PaginationMeta:
-      type: object
-      required: [page, pageSize, totalItems, totalPages]
-      properties:
-        page:
-          type: integer
-          example: 1
-        pageSize:
-          type: integer
-          example: 20
-        totalItems:
-          type: integer
-          example: 87
-        totalPages:
-          type: integer
-          example: 5
+          example: "Movie title cannot be empty."
 
     Genre:
       type: string
@@ -416,23 +523,9 @@ components:
           format: password
           example: "S3cur3P@ss!"
 
-    AuthToken:
-      type: object
-      required: [accessToken, tokenType, user]
-      properties:
-        accessToken:
-          type: string
-          description: JWT to use as a Bearer token
-          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-        tokenType:
-          type: string
-          example: "Bearer"
-        user:
-          $ref: '#/components/schemas/User'
-
     UserRegistration:
       type: object
-      required: [firstName, lastName, birthdate, email, password, phone]
+      required: [firstName, lastName, birthdate, email, password, phone, role]
       properties:
         firstName:
           type: string
@@ -443,6 +536,7 @@ components:
         birthdate:
           type: string
           format: date
+          description: Must be a date in the past.
           example: "2000-05-14"
         email:
           type: string
@@ -451,10 +545,14 @@ components:
         password:
           type: string
           format: password
+          minLength: 8
+          description: At least 8 characters.
           example: "S3cur3P@ss!"
         phone:
           type: string
           example: "+261340000000"
+        role:
+          $ref: '#/components/schemas/UserRole'
 
     # ── User ──────────────────────────────────
     User:
@@ -511,8 +609,9 @@ components:
           description: ISO 8601 duration
           example: "PT2H28M"
 
-    MovieUpdate:
+    MovieRequest:
       type: object
+      description: Used for both movie creation and update.
       required: [title, genres, description, duration]
       properties:
         title:
@@ -530,6 +629,7 @@ components:
         duration:
           type: string
           format: duration
+          description: ISO 8601 duration. Must not be null, negative or zero.
           example: "PT2H28M"
 
     # ── Projection ────────────────────────────
@@ -555,7 +655,7 @@ components:
           minimum: 0
           example: 12.50
 
-    ProjectionUpdate:
+    ProjectionRequest:
       type: object
       required: [movieId, roomId, datetime, seatPrice]
       properties:
@@ -570,23 +670,13 @@ components:
         datetime:
           type: string
           format: date-time
+          description: Must be in the future.
           example: "2026-08-15T19:30:00Z"
         seatPrice:
           type: number
           format: double
           minimum: 0
           example: 12.50
-
-    ProjectionPage:
-      type: object
-      required: [data, meta]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Projection'
-        meta:
-          $ref: '#/components/schemas/PaginationMeta'
 
     # ── Reservation ───────────────────────────
     Reservation:
@@ -612,10 +702,24 @@ components:
           format: date-time
           example: "2026-08-01T10:15:30Z"
 
-    ReservationUpdate:
+    ReservationRequest:
       type: object
-      required: [seatIds, status]
+      required: [status, projectionId, clientId, seatIds]
       properties:
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-08-01T10:15:30Z"
+        status:
+          $ref: '#/components/schemas/ReservationStatus'
+        projectionId:
+          type: string
+          format: uuid
+          example: "d1a2b3c4-e5f6-4a5b-8c9d-0e1f2a3b4c5d"
+        clientId:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d"
         seatIds:
           type: array
           minItems: 1
@@ -623,19 +727,7 @@ components:
             type: string
             format: uuid
           example: ["550e8400-e29b-41d4-a716-446655440000"]
-        status:
-          $ref: '#/components/schemas/ReservationStatus'
-
-    ReservationPage:
-      type: object
-      required: [data, meta]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Reservation'
-        meta:
-          $ref: '#/components/schemas/PaginationMeta'
 
 security:
   - bearerAuth: []
+  - cookieAuth: []
