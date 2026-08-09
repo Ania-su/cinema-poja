@@ -29,7 +29,7 @@ public class AuthController {
 
   @PostMapping("/login")
   public ResponseEntity<String> login(@RequestBody LoginRequest request) {
-    String token = authService.login(request.getEmail(), request.getPassword());
+    String token = authService.login(request);
 
     return ResponseEntity.status(200)
         .header(HttpHeaders.SET_COOKIE, buildCookie(token).toString())
