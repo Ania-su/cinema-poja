@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import school.hei.demo.endpoint.rest.controller.dto.ReservationRequest;
+import school.hei.demo.endpoint.rest.controller.validator.ReservationValidator;
 import school.hei.demo.entity.Reservation;
 import school.hei.demo.entity.enums.ReservationStatus;
 import school.hei.demo.exception.NotFoundException;
@@ -27,6 +28,7 @@ public class ReservationService {
   private final UserRepository userRepository;
   private final SeatRepository seatRepository;
   private final ReservationMapper reservationMapper;
+  private final ReservationValidator reservationValidator;
 
   public List<Reservation> getReservation() {
     return reservationRepository.findAll().stream()
@@ -42,6 +44,7 @@ public class ReservationService {
   }
 
   public Reservation updateReservation(UUID id, ReservationStatus status) {
+    reservationValidator.validate(status);
     JReservation jReservation =
         reservationRepository
             .findById(id)
@@ -52,6 +55,7 @@ public class ReservationService {
   }
 
   public Reservation createReservation(ReservationRequest newReservation) {
+    reservationValidator.validate(newReservation);
     JProjection jProjection =
         projectionRepository
             .findById(newReservation.getProjectionId())

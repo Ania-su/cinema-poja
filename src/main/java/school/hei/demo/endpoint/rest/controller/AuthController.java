@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import school.hei.demo.endpoint.rest.controller.dto.LoginRequest;
 import school.hei.demo.endpoint.rest.controller.dto.RegisterRequest;
+import school.hei.demo.exception.EmailAlreadyTakenException;
+import school.hei.demo.exception.InvalidCredentialsException;
 import school.hei.demo.service.AuthService;
 
 @RestController
@@ -29,7 +31,7 @@ public class AuthController {
 
   @PostMapping("/login")
   public ResponseEntity<String> login(@RequestBody LoginRequest request) {
-    String token = authService.login(request.getEmail(), request.getPassword());
+    String token = authService.login(request);
 
     return ResponseEntity.status(200)
         .header(HttpHeaders.SET_COOKIE, buildCookie(token).toString())

@@ -5,6 +5,7 @@ import java.util.UUID;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import school.hei.demo.endpoint.rest.controller.dto.MovieRequest;
+import school.hei.demo.endpoint.rest.controller.validator.MovieValidator;
 import school.hei.demo.entity.Movie;
 import school.hei.demo.exception.NotFoundException;
 import school.hei.demo.repository.MovieRepository;
@@ -17,6 +18,7 @@ public class MovieService {
 
   private final MovieRepository movieRepository;
   private final MovieMapper movieMapper;
+  private final MovieValidator movieValidator;
 
   public List<Movie> getMovies() {
     return movieMapper.toDomain(movieRepository.findAll());
@@ -37,6 +39,7 @@ public class MovieService {
   }
 
   public Movie createMovie(MovieRequest request) {
+    movieValidator.validate(request);
     Movie toSave = new Movie();
     toSave.setTitle(request.getTitle());
     toSave.setGenres(request.getGenres());
@@ -46,6 +49,7 @@ public class MovieService {
   }
 
   public Movie updateMovie(UUID id, MovieRequest request) {
+    movieValidator.validate(request);
     JMovie existing =
         movieRepository.findById(id).orElseThrow(() -> new NotFoundException("Movie not found"));
     existing.setTitle(request.getTitle());

@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import school.hei.demo.endpoint.rest.controller.dto.ProjectionRequest;
+import school.hei.demo.endpoint.rest.controller.validator.ProjectionValidator;
 import school.hei.demo.entity.Projection;
 import school.hei.demo.repository.ProjectionRepository;
 import school.hei.demo.repository.mapper.ProjectionMapper;
@@ -23,6 +24,7 @@ public class ProjectionService {
   private final MovieService movieService;
   private final RoomService roomService;
   private final EntityManager entityManager;
+  private final ProjectionValidator projectionValidator;
 
   public List<Projection> getAllProjections() {
     return projectionRepository.findAll().stream()
@@ -31,6 +33,7 @@ public class ProjectionService {
   }
 
   public Projection updateProjection(UUID id, ProjectionRequest projectionRequest) {
+    projectionValidator.validate(projectionRequest);
     JProjection jProjection =
         projectionRepository
             .findById(id)
