@@ -5,6 +5,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import school.hei.demo.entity.enums.Genre;
 
 @Entity
@@ -23,7 +25,8 @@ public class JMovie {
   @ElementCollection(targetClass = Genre.class)
   @CollectionTable(name = "movie_genre", joinColumns = @JoinColumn(name = "movie_id"))
   @Enumerated(EnumType.STRING)
-  @Column(name = "genre")
+  @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+  @Column(name = "genre", columnDefinition = "genre")
   private List<Genre> genres;
 
   @Column(columnDefinition = "TEXT")
