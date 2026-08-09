@@ -1,9 +1,13 @@
 package school.hei.demo.endpoint.rest.controller.dto;
 
 import java.time.LocalDate;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import school.hei.demo.entity.enums.UserRole;
 
+@AllArgsConstructor
+@NoArgsConstructor
 @Data
 public class RegisterRequest {
   private String firstName;

@@ -32,7 +32,7 @@ public class ReservationController {
   }
 
   @PutMapping("/{id}")
-  public Reservation updateReservation(@PathVariable UUID id, ReservationStatus status) {
+  public Reservation updateReservation(@PathVariable UUID id, @RequestBody ReservationStatus status) {
     return reservationService.updateReservation(id, status);
   }
 
