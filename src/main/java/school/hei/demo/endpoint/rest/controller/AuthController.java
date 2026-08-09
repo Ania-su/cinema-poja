@@ -10,8 +10,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import school.hei.demo.endpoint.rest.controller.dto.LoginRequest;
 import school.hei.demo.endpoint.rest.controller.dto.RegisterRequest;
-import school.hei.demo.exception.EmailAlreadyTakenException;
-import school.hei.demo.exception.InvalidCredentialsException;
 import school.hei.demo.service.AuthService;
 
 @RestController
