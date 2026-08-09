@@ -1,7 +1,6 @@
 package school.hei.demo.service;
 
 import jakarta.persistence.EntityManager;
-import jakarta.ws.rs.NotFoundException;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -10,6 +9,7 @@ import org.springframework.stereotype.Service;
 import school.hei.demo.endpoint.rest.controller.dto.ProjectionRequest;
 import school.hei.demo.endpoint.rest.controller.validator.ProjectionValidator;
 import school.hei.demo.entity.Projection;
+import school.hei.demo.exception.NotFoundException;
 import school.hei.demo.repository.ProjectionRepository;
 import school.hei.demo.repository.mapper.ProjectionMapper;
 import school.hei.demo.repository.model.JMovie;
@@ -38,6 +38,9 @@ public class ProjectionService {
         projectionRepository
             .findById(id)
             .orElseThrow(() -> new NotFoundException("Projection not found with id: " + id));
+
+    projectionValidator.validate(projectionRequest);
+
     movieService.findById(projectionRequest.getMovieId());
     roomService.findById(projectionRequest.getRoomId());
 
